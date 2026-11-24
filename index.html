@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Diario">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Diario allenamenti</title>
+<style>
+/* VOICE: app nativa iPhone su iOS 27, pulita e tattile
+   IDEA: Liquid Glass: barre e pulsanti in vetro che galleggiano sopra il contenuto
+   PICTURE: card esercizio con griglia dei giri e scala RPE 1-10 a tocco, da verde a rosso
+   COLOUR and TYPE: colori di sistema iOS, tinta arancio; font di sistema SF, numeri arrotondati
+   LAYOUT: titolo grande, card ad angoli ampi, tab bar a capsula staccata dal bordo */
+:root{color-scheme:light dark;
+--bg:light-dark(#f2f2f7,#000);--cell:light-dark(#fff,#1c1c1e);--fill:light-dark(rgba(120,120,128,.12),rgba(120,120,128,.24));
+--sep:light-dark(rgba(60,60,67,.18),rgba(84,84,88,.5));--ink:light-dark(#000,#fff);--mute:light-dark(#8a8a8e,#8d8d93);
+--tint:#ff9500;--red:#ff3b30;--green:#34c759;
+--glass:light-dark(rgba(255,255,255,.62),rgba(40,40,44,.55));--rim:light-dark(rgba(255,255,255,.9),rgba(255,255,255,.18));
+--shadow:0 8px 30px light-dark(rgba(0,0,0,.12),rgba(0,0,0,.5)),0 1px 2px rgba(0,0,0,.08)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:320px;background:radial-gradient(120% 90% at 15% 0,color-mix(in srgb,var(--tint) 28%,transparent),transparent 60%),radial-gradient(90% 80% at 95% 10%,color-mix(in srgb,#ff2d55 16%,transparent),transparent 60%);pointer-events:none;z-index:-1}
+.app{max-width:560px;margin:0 auto;padding:env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) 130px max(16px,env(safe-area-inset-left))}
+.glass{background:var(--glass);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:var(--shadow),inset 0 1px 0 var(--rim),inset 0 -1px 0 light-dark(rgba(0,0,0,.04),rgba(255,255,255,.05));border:.5px solid light-dark(rgba(0,0,0,.06),rgba(255,255,255,.1))}
+.navbar{position:sticky;top:env(safe-area-inset-top);z-index:5;display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;min-height:62px}
+.navbar.flat{min-height:24px}
+.gbtn{border:0;color:var(--ink);font:inherit;cursor:pointer;min-height:44px;min-width:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 14px}
+.gbtn.round{padding:0;width:44px}
+.gbtn svg{width:20px;height:20px}
+.gbtn.tinted{background:var(--tint);color:#fff;font-weight:600;box-shadow:0 6px 18px color-mix(in srgb,var(--tint) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.45)}
+.gbtn:active,.tile:active{transform:scale(.96)}
+h1{font:700 34px/1.1 -apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;letter-spacing:.2px;margin:6px 4px 6px}
+.lead{color:var(--mute);font-size:15px;margin:0 4px 6px}
+.hdr{font-size:15px;font-weight:600;margin:26px 4px 9px}
+.ftr{font-size:13px;color:var(--mute);margin:8px 4px 0}
+.group{background:var(--cell);border-radius:26px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:12px 18px;min-height:50px;position:relative;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left}
+.row+.row::before{content:"";position:absolute;top:0;left:18px;right:0;border-top:.5px solid var(--sep)}
+button.row{cursor:pointer}button.row:active{background:var(--fill)}
+.ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;flex:none;font-weight:700;font-size:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.grow{flex:1}
+.t{display:block}.s{display:block;font-size:14px;color:var(--mute)}
+.val{color:var(--mute)}
+.tiles{display:grid;gap:12px}
+.tile{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:18px;border-radius:28px;background:var(--cell);border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:transform .15s}
+.tile .ico{width:48px;height:48px;border-radius:15px;font-size:20px}
+.tile b{font-size:19px;font-weight:600;display:block}
+.play{width:40px;height:40px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--tint)}
+.ex{background:var(--cell);border-radius:26px;padding:16px 16px 14px;margin-bottom:12px}
+.exh{display:flex;align-items:flex-start;gap:10px}
+.exh .grow b{font-weight:600;display:block;font-size:17px}
+.badge{flex:none;min-width:64px;text-align:center;border-radius:999px;padding:6px 12px;font:600 14px -apple-system,system-ui,sans-serif;background:var(--fill);color:var(--mute);font-variant-numeric:tabular-nums}
+.badge b{font-size:17px;margin-left:3px}
+.kg{display:flex;align-items:center;gap:5px;color:var(--mute);font-size:14px;margin-top:3px}
+.kg input{width:48px;border:0;border-radius:8px;background:var(--fill);color:var(--ink);font:600 15px -apple-system,system-ui,sans-serif;text-align:center;padding:4px 0}
+.grid{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:8px;margin-top:12px}
+.cell{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:16px;background:var(--fill);padding:6px 0 7px;cursor:text;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s}
+.cell span{font-size:11px;color:var(--mute)}
+.cell input{width:100%;border:0;background:transparent;text-align:center;color:var(--ink);font:600 24px ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;padding:0;font-variant-numeric:tabular-nums}
+.cell.low{box-shadow:inset 0 0 0 2px var(--tint)}.cell.up{box-shadow:inset 0 0 0 2px var(--green)}
+.cell:focus-within{background:color-mix(in srgb,var(--tint) 16%,transparent)}
+input:focus{outline:none}
+.rpe{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px;margin-top:12px;padding:3px;border-radius:999px;background:var(--fill)}
+.rpe button{border:0;min-height:38px;border-radius:999px;background:transparent;color:var(--mute);font:600 15px ui-rounded,-apple-system,system-ui,sans-serif;cursor:pointer;padding:0;transition:background .15s,color .15s}
+.rpe button.on{color:#fff;background:var(--c);box-shadow:0 3px 10px color-mix(in srgb,var(--c) 50%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
+.rpe button.lit{background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--ink)}
+.rpel{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin:5px 8px 0}
+.gbtn:focus-visible,.row:focus-visible,.tile:focus-visible,.rpe button:focus-visible,textarea:focus-visible,.tab:focus-visible,.seg button:focus-visible{outline:3px solid var(--tint);outline-offset:2px}
+.fld{width:100%;border:0;background:transparent;color:var(--ink);font:inherit;text-align:right;padding:0}
+textarea{width:100%;min-height:84px;border:0;background:var(--cell);color:var(--ink);font:inherit;padding:14px 18px;border-radius:26px;resize:vertical;display:block}
+.cta{display:block;width:100%;margin-top:22px;min-height:54px;border-radius:999px;font-size:17px}
+.pill{font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.p{background:color-mix(in srgb,var(--green) 20%,transparent);color:light-dark(#1d8a3a,#4cd964)}
+.pill.m{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+.pill.n{background:var(--fill);color:var(--mute)}
+.seg{display:flex;border-radius:999px;padding:4px;margin:8px 0 0;gap:2px}
+.seg button{flex:1;border:0;background:none;color:var(--ink);font:500 14px -apple-system,system-ui,sans-serif;padding:8px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;min-height:38px}
+.seg button[aria-pressed=true]{background:var(--cell);box-shadow:0 2px 8px rgba(0,0,0,.15);font-weight:600}
+.fig{position:relative;height:210px;margin:6px 0 4px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.big{font:700 38px/1 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.big small{font-size:15px;font-weight:600;color:var(--mute);margin-left:4px}
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:2px;padding:5px;border-radius:999px;z-index:6;width:min(340px,calc(100% - 40px))}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--ink);text-decoration:none;font-size:10.5px;font-weight:600;min-height:54px;justify-content:center;border-radius:999px}
+.tab svg{width:24px;height:24px}
+.tab[aria-current=page]{color:var(--tint);background:var(--fill)}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translate(-50%,-90px);color:var(--ink);padding:12px 20px;border-radius:999px;transition:transform .35s cubic-bezier(.2,1.3,.4,1);z-index:9;font-size:15px;font-weight:600}
+.toast.on{transform:translate(-50%,0)}
+.del{color:var(--red)}
+.exl{display:block;font-size:13px;color:var(--mute);margin-top:4px;line-height:1.35}
+.hidden{display:none}
+.x{border:0;background:var(--fill);color:var(--mute);width:30px;height:30px;border-radius:50%;cursor:pointer;flex:none}
+@media(prefers-reduced-motion:reduce){.toast,.tile,.rpe button,.cell{transition:none}}
+</style>
+</head>
+<body>
+<main class="app" id="app"></main>
+<nav class="tabbar glass">
+ <a class="tab" href="#oggi" id="n-oggi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 10h2v4H2zM20 10h2v4h-2zM5 7h3v10H5zM16 7h3v10h-3zM9 11h6v2H9z"/></svg>Allenati</a>
+ <a class="tab" href="#storico" id="n-storico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>Storico</a>
+ <a class="tab" href="#progressi" id="n-progressi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Progressi</a>
+</nav>
+<div class="toast glass" id="toast" role="status"></div>
+<script>
+{
+const TPL={
+ s1:{name:"Sessione 1",rounds:4,color:"#ff3b30",ex:[
+  {id:"pullz",name:"Pull-up zavorrati",u:"rip",t:6,load:5},
+  {id:"pushr",name:"Push-up piedi rialzati",u:"rip",t:12,load:0},
+  {id:"scap",name:"Scapular pull-up",u:"rip",t:10,load:0},
+  {id:"tric",name:"Tricipiti extension",u:"rip",t:10,load:0},
+  {id:"lsit",name:"L-sit",u:"rip",t:10,load:0},
+  {id:"mclimb",name:"Mountain climber",u:"s",t:35,load:0}]},
+ s2:{name:"Sessione 2",rounds:4,color:"#5856d6",ex:[
+  {id:"pull",name:"Pull-up",u:"rip",t:8,load:0},
+  {id:"squat",name:"Squat zavorrati",u:"rip",t:12,load:10},
+  {id:"pushr",name:"Push-up piedi rialzati",u:"rip",t:12,load:10},
+  {id:"ponte",name:"Ponte gluteo monogamba",u:"rip",t:20,load:0},
+  {id:"dip",name:"Dip",u:"rip",t:7,load:0},
+  {id:"plank",name:"Plank",u:"s",t:45,load:0},
+  {id:"lsit",name:"L-sit",u:"rip",t:10,load:0}]},
+ diti:{name:"Diti",rounds:3,fb:true,color:"#34c759",ex:[
+  {id:"hc",name:"Half crimp",u:"s",t:7,load:0},
+  {id:"of",name:"Open fingers",u:"s",t:7,load:0}]}
+};
+const EXN={};for(const k in TPL)for(const e of TPL[k].ex)EXN[e.id]=e;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+const ago=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)};
+let S;try{S=JSON.parse(localStorage.getItem("diario-allenamenti"))}catch(e){}
+if(!S||!Array.isArray(S.sessions))S={sessions:[]};
+const persist=()=>{try{localStorage.setItem("diario-allenamenti",JSON.stringify(S))}catch(e){}};
+const app=document.getElementById("app");
+let draft=null,chartEx="pullz";
+
+const byDate=(a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id;
+const last=tpl=>S.sessions.filter(s=>s.tpl==tpl).sort(byDate)[0];
+const lastBw=()=>{const s=[...S.sessions].sort(byDate)[0];return s?s.bw:""};
+const fmt=iso=>new Date(iso+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"});
+const total=(s,id)=>s.d[id]?s.d[id].v.reduce((a,b)=>a+(+b||0),0):0;
+const metric=s=>TPL[s.tpl].ex.reduce((a,e)=>a+(TPL[s.tpl].fb||e.u=="rip"?total(s,e.id):0),0);
+const avgRpe=s=>{const r=Object.values(s.d).map(x=>x.rpe).filter(Boolean);return r.length?(r.reduce((a,b)=>a+b,0)/r.length).toFixed(1).replace(".",","):"–"};
+const toast=m=>{const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),1500)};
+const RPEC=v=>`hsl(${Math.round(135-(v-1)*15)} 72% ${v>6?50:44}%)`;
+const rpeBtns=(id,cur)=>Array.from({length:10},(_,i)=>{const v=i+1;return `<button data-rpe="${id}" data-v="${v}" class="${cur==v?"on":cur>v?"lit":""}" style="--c:${RPEC(v)}" aria-pressed="${cur==v}">${v}</button>`}).join("");
+const badgeStyle=v=>v?`background:${RPEC(v)};color:#fff`:"";
+const icon=(c,txt)=>`<span class="ico" style="background:${c}">${txt}</span>`;
+
+function home(){
+ const rows=Object.entries(TPL).map(([k,t])=>{const l=last(k);
+  return `<button class="tile" data-start="${k}">${icon(t.color,t.fb?"✋":k=="s1"?"1":"2")}
+  <span><b>${esc(t.name)}</b><span class="s">${t.rounds} giri${l?" · ultima "+esc(fmt(l.date)):""}</span><span class="exl">${t.ex.map(e=>esc(e.name)).join(" · ")}</span></span><span class="play"><svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor"><path d="M1 1.7v12.6a1 1 0 0 0 1.5.86l10.6-6.3a1 1 0 0 0 0-1.72L2.5.84A1 1 0 0 0 1 1.7z"/></svg></span></button>`}).join("");
+ const wk=S.sessions.filter(s=>s.date>=ago(6)).length;
+ app.innerHTML=`<div class="navbar flat"></div><h1>Allenati</h1><p class="lead">${wk} sessioni negli ultimi 7 giorni</p>
+ <div class="hdr">Scegli la scheda</div><div class="tiles">${rows}</div>
+ <p class="ftr">Si parte dai valori dell'ultima volta: correggi solo quello che cambia.</p>`;
+}
+
+function start(k){
+ const t=TPL[k],l=last(k);
+ draft={id:Date.now(),date:today(),tpl:k,bw:lastBw(),note:t.fb&&l?l.note:"",
+  d:Object.fromEntries(t.ex.map(e=>{const p=l&&l.d[e.id];return[e.id,{load:p?p.load:e.load,rpe:0,v:p?[...p.v]:Array(t.rounds).fill(e.t)}]}))};
+ session();window.scrollTo(0,0);
+}
+
+function session(){
+ const t=TPL[draft.tpl];
+ const ex=t.ex.map(e=>{const r=draft.d[e.id];
+  const cells=r.v.map((v,i)=>`<label class="cell ${+v<e.t?"low":+v>e.t?"up":""}"><span>Giro ${i+1}</span><input inputmode="numeric" data-ex="${e.id}" data-r="${i}" value="${esc(v)}" aria-label="${esc(e.name)} giro ${i+1}"></label>`).join("");
+  return `<div class="ex"><div class="exh"><div class="grow"><b>${esc(e.name)}</b>
+   <span class="kg">${e.u=="s"?e.t+" s":"× "+e.t} · ${t.fb?"zavorra":"carico"} <input inputmode="decimal" data-load="${e.id}" value="${esc(r.load)}" aria-label="Carico ${esc(e.name)}"> kg</span></div>
+   <span class="badge" id="b-${e.id}" style="${badgeStyle(r.rpe)}">RPE<b>${r.rpe||"–"}</b></span></div>
+   <div class="grid" style="--n:${t.rounds}">${cells}</div>
+   <div class="rpe" role="group" aria-label="RPE ${esc(e.name)}">${rpeBtns(e.id,r.rpe)}</div>
+   <div class="rpel"><span>1 facile</span><span>RPE dell'ultimo giro</span><span>10 al limite</span></div></div>`}).join("");
+ app.innerHTML=`<div class="navbar"><button class="gbtn round glass" data-go="oggi" aria-label="Indietro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="gbtn tinted" id="f-save">Salva</button></div>
+ <h1>${esc(t.name)}</h1>
+ <div class="group" style="margin-top:12px">
+  <label class="row"><span class="grow">Data</span><input type="date" class="fld" id="f-date" value="${esc(draft.date)}" style="max-width:170px"></label>
+  <label class="row"><span class="grow">Peso corporeo</span><input inputmode="decimal" class="fld" id="f-bw" value="${esc(draft.bw)}" style="max-width:70px"><span class="val">kg</span></label>
+  <div class="row"><span class="grow">${t.fb?"Secondi in sospensione":"Ripetizioni totali"}</span><span class="val" id="f-vol"></span></div>
+ </div>
+ <div class="hdr">Esercizi · ${t.rounds} giri</div>${ex}
+ <p class="ftr">Bordo arancione: sotto l'obiettivo. Bordo verde: sopra.</p>
+ <div class="hdr">Note</div><textarea id="f-note" placeholder="${t.fb?"Tacca, presa, sensazioni alle dita":"Come è andata, cosa cambiare"}">${esc(draft.note)}</textarea>
+ <button class="gbtn tinted cta" id="f-save2">Salva sessione</button>`;
+ updVol();
+}
+function updVol(){const v=document.getElementById("f-vol");if(v&&draft)v.textContent=metric(draft)}
+
+function storico(){
+ const list=[...S.sessions].sort(byDate);
+ const rows=list.map(s=>{const t=TPL[s.tpl];
+  const prev=S.sessions.filter(x=>x.tpl==s.tpl&&x.date<s.date).sort(byDate)[0];
+  const m=metric(s),dl=prev?m-metric(prev):null;
+  const pill=dl==null?`<span class="pill n">prima</span>`:`<span class="pill ${dl>0?"p":dl<0?"m":"n"}">${dl>0?"+":""}${dl}</span>`;
+  return `<div class="row">${icon(t.color,t.fb?"✋":s.tpl=="s1"?"1":"2")}
+  <span class="grow"><span class="t">${esc(t.name)} <span class="s" style="display:inline">· ${esc(fmt(s.date))}</span></span>
+  <span class="s">${m} ${t.fb?"s":"rip"} · RPE medio ${avgRpe(s)}${s.note?" · "+esc(s.note):""}</span></span>${pill}
+  <button class="x" data-del="${s.id}" aria-label="Elimina">✕</button></div>`}).join("");
+ app.innerHTML=`<div class="navbar flat"></div><h1>Storico</h1>
+ <div class="hdr">Sessioni</div><div class="group">${rows||'<div class="row val">Nessuna sessione ancora</div>'}</div>
+ <p class="ftr">Il numero confronta con la sessione precedente dello stesso tipo.</p>
+ <div class="hdr">Dati</div><div class="group">
+  <button class="row" id="b-copy"><span class="grow" style="color:var(--tint)">Copia backup</span></button>
+  <button class="row" id="b-export"><span class="grow" style="color:var(--tint)">Esporta file di backup</span></button>
+  <label class="row" style="cursor:pointer"><span class="grow" style="color:var(--tint)">Importa backup</span><input type="file" id="b-import" accept=".json,application/json" class="hidden"></label></div>
+ <p class="ftr">I dati restano su questo telefono. Esporta ogni tanto un backup in File o iCloud: se cancelli i dati di Safari, lo reimporti da qui.</p>`;
+}
+
+function progressi(){
+ const exs=TPL[ptpl].ex.map(e=>`<button class="row" data-pex="${e.id}"><span class="grow">${esc(e.name)}</span>${e.id==chartEx?'<span style="color:var(--tint);font-weight:600">✓</span>':""}</button>`).join("");
+ app.innerHTML=`<div class="navbar flat"></div><h1>Progressi</h1>
+ <div class="seg glass">${Object.entries(TPL).map(([k,t])=>`<button data-ptpl="${k}" aria-pressed="${k==ptpl}">${esc(t.name)}</button>`).join("")}</div>
+ <div class="hdr">${esc(EXN[chartEx].name)}</div>
+ <div class="group" style="padding:14px 16px 10px"><div id="kpi"></div><div class="fig"><svg id="chart" role="img" aria-label="Andamento"></svg></div></div>
+ <p class="ftr">Totale per sessione, sommato su tutti i giri.</p>
+ <div class="hdr">Esercizio</div><div class="group">${exs}</div>`;
+ const s=document.getElementById("chart");
+ const pts=()=>S.sessions.filter(x=>x.tpl==ptpl&&x.d[chartEx]).sort((a,b)=>-byDate(a,b)).map(x=>({d:x.date,v:total(x,chartEx),l:x.d[chartEx].load,r:x.d[chartEx].rpe}));
+ const p=pts(),e=EXN[chartEx];
+ if(p.length){const z=p[p.length-1],dl=z.v-p[0].v;
+  document.getElementById("kpi").innerHTML=`<div class="big">${z.v}<small>${e.u=="s"?"s":"rip"}</small> <span class="pill ${dl>0?"p":dl<0?"m":"n"}" style="vertical-align:middle">${dl>0?"+":""}${dl} da inizio</span></div><div class="s">Ultima: ${esc(fmt(z.d))} · ${z.l} kg · RPE ${z.r||"–"}</div>`}
+ const draw=()=>{const W=s.clientWidth,H=s.clientHeight;
+  if(p.length<2){s.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="currentColor" opacity=".5" font-size="15">Servono almeno 2 sessioni</text>`;return}
+  const L=30,R=10,T=14,B=24,vs=p.map(q=>q.v),mx=Math.max(...vs),mn=Math.min(...vs),pad=(mx-mn)||4,lo=Math.max(0,mn-pad),hi=mx+pad*.4;
+  const X=i=>L+i*(W-L-R)/(p.length-1),Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  const line=p.map((q,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(q.v).toFixed(1)).join("");
+  const area=line+`L${X(p.length-1)} ${H-B}L${X(0)} ${H-B}Z`;
+  const grid=[lo,(lo+hi)/2,hi].map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="currentColor" opacity=".1"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="currentColor" opacity=".5">${Math.round(v)}</text>`).join("");
+  const dots=p.map((q,i)=>`<circle cx="${X(i)}" cy="${Y(q.v)}" r="4" fill="var(--cell)" stroke="var(--tint)" stroke-width="2.5"/>`+(i==0||i==p.length-1||W>480?`<text x="${X(i)}" y="${H-6}" text-anchor="${i==0?"start":i==p.length-1?"end":"middle"}" font-size="11" fill="currentColor" opacity=".5">${new Date(q.d+"T12:00").toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</text>`:"")).join("");
+  s.innerHTML=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9500" stop-opacity=".3"/><stop offset="1" stop-color="#ff9500" stop-opacity="0"/></linearGradient></defs>`+grid+`<path d="${area}" fill="url(#g)"/><path d="${line}" fill="none" stroke="var(--tint)" stroke-width="2.5" stroke-linejoin="round"/>`+dots;
+ };
+ const ro=new ResizeObserver(draw);ro.observe(s);
+}
+let ptpl="s1";
+
+function route(){
+ const h=(location.hash||"#oggi").slice(1),cur=["oggi","storico","progressi"].includes(h)?h:"oggi";
+ for(const n of["oggi","storico","progressi"])document.getElementById("n-"+n).toggleAttribute("aria-current",n==cur);
+ document.getElementById("n-"+cur).setAttribute("aria-current","page");
+ draft=null;
+ if(cur=="storico")storico();else if(cur=="progressi")progressi();else home();
+ window.scrollTo(0,0);
+}
+function save(){
+ draft.date=document.getElementById("f-date").value||today();draft.bw=+String(document.getElementById("f-bw").value).replace(",",".")||"";
+ draft.note=document.getElementById("f-note").value.trim();
+ S.sessions.push(draft);persist();toast("Sessione salvata");location.hash="storico";route();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
+app.addEventListener("click",ev=>{
+ const b=ev.target.closest("button");if(!b)return;
+ if(b.dataset.start)start(b.dataset.start);
+ else if(b.dataset.go){location.hash=b.dataset.go;route()}
+ else if(b.id=="f-save"||b.id=="f-save2")save();
+ else if(b.dataset.del){if(!confirm("Eliminare questa sessione?"))return;S.sessions=S.sessions.filter(s=>s.id!=b.dataset.del);persist();storico();toast("Eliminata")}
+ else if(b.id=="b-copy"){navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast("Backup copiato"),()=>toast("Copia non riuscita"))}
+ else if(b.id=="b-export"){const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="diario-allenamenti-"+today()+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+ else if(b.dataset.ptpl){ptpl=b.dataset.ptpl;chartEx=TPL[ptpl].ex[0].id;progressi()}
+ else if(b.dataset.pex){chartEx=b.dataset.pex;progressi()}
+ else if(b.dataset.rpe&&draft){const id=b.dataset.rpe,v=+b.dataset.v,r=draft.d[id];r.rpe=r.rpe==v?0:v;
+  b.parentElement.innerHTML=rpeBtns(id,r.rpe);const bd=document.getElementById("b-"+id);bd.setAttribute("style",badgeStyle(r.rpe));bd.querySelector("b").textContent=r.rpe||"–"}
+});
+app.addEventListener("input",ev=>{
+ const i=ev.target;if(!draft)return;
+ if(i.dataset.ex){const e=EXN[i.dataset.ex];draft.d[i.dataset.ex].v[+i.dataset.r]=i.value===""?"":+i.value;
+  const c=i.closest(".cell");c.classList.toggle("low",i.value!==""&&+i.value<e.t);c.classList.toggle("up",+i.value>e.t);updVol()}
+ if(i.dataset.load)draft.d[i.dataset.load].load=+String(i.value).replace(",",".")||0;
+});
+app.addEventListener("change",ev=>{
+ if(ev.target.id!="b-import"||!ev.target.files[0])return;
+ ev.target.files[0].text().then(txt=>{const d=JSON.parse(txt);if(!d||!Array.isArray(d.sessions))throw 0;
+  const ids=new Set(S.sessions.map(s=>s.id));let n=0;for(const s of d.sessions)if(s&&TPL[s.tpl]&&s.d&&!ids.has(s.id)){S.sessions.push(s);n++}
+  persist();storico();toast(n+" sessioni importate")}).catch(()=>toast("File non valido"));
+});
+app.addEventListener("focusin",ev=>{if(ev.target.matches(".cell input,.kg input"))ev.target.select()});
+window.addEventListener("hashchange",route);
+route();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
