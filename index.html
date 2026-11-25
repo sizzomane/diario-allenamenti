@@ -292,9 +292,11 @@ function home(){
   return `<button class="tile" data-start="${k}">${icon(k)}
   <span><b>${esc(META[k].name)}</b><span class="s">${p.rounds} giri · v${p.ver}${l?" · ultima "+esc(fmt(l.date)):""}</span><span class="exl">${p.ex.map(e=>esc(e.name)).join(" · ")}</span></span><span class="play"><svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor"><path d="M1 1.7v12.6a1 1 0 0 0 1.5.86l10.6-6.3a1 1 0 0 0 0-1.72L2.5.84A1 1 0 0 0 1 1.7z"/></svg></span></button>`}).join("");
  const wk=S.sessions.filter(s=>s.date>=ago(6)).length,dr=S.draft;
+ const bk=needBackup()?`<div class="banner warn"><span><b>Fai un backup</b><br><span class="s">${S.lastBackup?"L'ultimo è del "+esc(fmt(dstr(new Date(S.lastBackup))))+".":"Non hai ancora mai esportato i dati."} Salvalo in File o iCloud: se perdi i dati del telefono, lo reimporti.</span></span>
+  <div class="acts"><button class="gbtn tinted small" style="color:#fff" id="bk-now">Esporta ora</button><button class="gbtn small" id="bk-later">Tra 2 giorni</button></div></div>`:"";
  const banner=dr?`<div class="banner warn"><span><b>${dr&&dr.editOf?"Modifica in corso":"Sessione in corso"}</b><br><span class="s">${esc(META[dr.tpl].name)} · ${esc(fmt(dr.date))}: è stata salvata in automatico.</span></span>
   <div class="acts"><button class="gbtn tinted small" style="color:#fff" id="d-res">Riprendi</button><button class="gbtn small" id="d-del">Scarta</button></div></div>`:"";
- app.innerHTML=`<div class="navbar flat"></div><h1>Allenati</h1><p class="lead">${wk} sessioni negli ultimi 7 giorni</p>${banner}
+ app.innerHTML=`<div class="navbar flat"></div><h1>Allenati</h1><p class="lead">${wk} sessioni negli ultimi 7 giorni</p>${banner}${bk}
  <div class="hdr">Scegli la scheda</div><div class="tiles">${rows}</div>
  <p class="ftr">Si parte dai valori dell'ultima volta: correggi solo quello che cambia. I dati si salvano mentre scrivi.</p>`;
 }
@@ -361,8 +363,26 @@ function storico(){
   <button class="row" id="b-export"><span class="grow" style="color:var(--tint)">Esporta file di backup</span></button>
   <button class="row" id="b-csv"><span class="grow" style="color:var(--tint)">Esporta CSV per Excel o Fogli</span></button>
   <label class="row" style="cursor:pointer"><span class="grow" style="color:var(--tint)">Importa backup</span><input type="file" id="b-import" accept=".json,application/json" class="hidden"></label></div>
- <p class="ftr">I dati restano su questo telefono. Esporta ogni tanto un backup in File o iCloud: se perdi i dati, lo reimporti da qui.</p>`;
+ <p class="ftr">I dati restano su questo telefono. ${S.lastBackup?"Ultimo backup: "+esc(fmt(dstr(new Date(S.lastBackup))))+".":"Nessun backup ancora."} Ti ricordo di farlo ogni 7 giorni se hai sessioni nuove.</p>`;
 }
+
+/* ---------- Backup ---------- */
+const DAY=864e5;
+function needBackup(){
+ if(!S.sessions.length)return false;
+ if(S.backupSnooze&&Date.now()<S.backupSnooze)return false;
+ const last=S.lastBackup||0,newer=S.sessions.filter(x=>(x.end||x.id)>last).length;
+ if(!newer)return false;
+ return !last?S.sessions.length>=3:Date.now()-last>7*DAY;
+}
+async function exportJSON(){
+ const name="diario-allenamenti-"+today()+".json",txt=JSON.stringify(S,null,1);
+ try{const f=new File([txt],name,{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Backup diario allenamenti"});markBackup();return}
+ }catch(e){if(e&&e.name=="AbortError")return}
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);markBackup();
+}
+function markBackup(){S.lastBackup=Date.now();S.backupSnooze=0;persist();toast("Backup esportato");if(view=="storico")storico();if(view=="oggi")home()}
 
 /* ---------- Dettaglio sessione ---------- */
 let openDet=null;
@@ -536,8 +556,9 @@ app.addEventListener("click",ev=>{
  else if(D.rpe&&s){const r=s.d[D.rpe],v=+D.v;r.rpe=r.rpe==v?0:v;persist();
   b.parentElement.innerHTML=rpeBtns(D.rpe,r.rpe);const bd=document.getElementById("b-"+D.rpe);bd.setAttribute("style",badgeStyle(r.rpe));bd.querySelector("b").textContent=r.rpe||"–"}
  else if(D.del){if(!confirm("Eliminare questa sessione?"))return;S.sessions=S.sessions.filter(x=>x.id!=D.del);persist();storico();toast("Eliminata")}
- else if(b.id=="b-copy"){navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast("Backup copiato"),()=>toast("Copia non riuscita"))}
- else if(b.id=="b-export"){const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="diario-allenamenti-"+today()+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+ else if(b.id=="b-copy"){navigator.clipboard.writeText(JSON.stringify(S)).then(()=>{toast("Backup copiato");S.lastBackup=Date.now();persist()},()=>toast("Copia non riuscita"))}
+ else if(b.id=="b-export"||b.id=="bk-now")exportJSON();
+ else if(b.id=="bk-later"){S.backupSnooze=Date.now()+2*DAY;persist();home()}
  else if(D.ptpl){ptpl=D.ptpl;pex=null;pmode="perf";stopRO();progressi()}
  else if(D.pex){pex=D.pex;stopRO();progressi()}
  else if(D.pmode){pmode=D.pmode;stopRO();progressi()}
