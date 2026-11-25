@@ -282,7 +282,7 @@ function gate(){
  document.getElementById("tabbar").style.display="none";
  app.innerHTML=`<div class="gate"><img src="icon-180.png" alt=""><h1>Installa il Diario</h1>
  <p class="lead">Su iPhone i dati salvati in Safari e quelli dell'app sulla schermata Home sono separati. Usa sempre l'app installata.</p>
- <ol><li>Tocca <b>Condividi</b> in Safari</li><li>Scegli <b>Aggiungi alla schermata Home</b></li><li>Apri il Diario dall'icona</li></ol>
+ <ol><li>In Safari tocca <b>•••</b> in basso a destra (o l'icona Condividi, se la vedi)</li><li>Tocca <b>Condividi</b>, poi scorri e scegli <b>Aggiungi alla schermata Home</b></li><li>Apri il Diario dall'icona</li></ol>
  <button class="gbtn glass" id="g-ok" style="margin:0 auto">Usa comunque nel browser</button></div>`;
 }
 
@@ -375,12 +375,24 @@ function needBackup(){
  if(!newer)return false;
  return !last?S.sessions.length>=3:Date.now()-last>7*DAY;
 }
+/* Prova il menu Condividi (con tipi di file diversi), poi il download diretto */
+async function shareFile(name,txt,mime){
+ if(navigator.share){
+  for(const t of [mime,"text/plain","application/octet-stream"]){
+   let f;try{f=new File([txt],name,{type:t})}catch(e){break}
+   if(navigator.canShare&&!navigator.canShare({files:[f]}))continue;
+   try{await navigator.share({files:[f]});return "ok"}
+   catch(e){if(e.name=="AbortError")return "abort";if(e.name=="NotAllowedError")break}
+  }
+ }
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+ return "dl";
+}
 async function exportJSON(){
- const name="diario-allenamenti-"+today()+".json",txt=JSON.stringify(S,null,1);
- try{const f=new File([txt],name,{type:"application/json"});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Backup diario allenamenti"});markBackup();return}
- }catch(e){if(e&&e.name=="AbortError")return}
- const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);markBackup();
+ const r=await shareFile("diario-allenamenti-"+today()+".json",JSON.stringify(S,null,1),"application/json");
+ if(r=="abort")return;
+ markBackup();
+ if(r=="dl")toast(standalone()?"Se non si è aperto nulla, usa Copia backup":"File scaricato");
 }
 function markBackup(){S.lastBackup=Date.now();S.backupSnooze=0;persist();toast("Backup esportato");if(view=="storico")storico();if(view=="oggi")home()}
 
@@ -433,7 +445,7 @@ function progressi(){
  const rows0=ss.map(s=>{const e=s.ex.find(x=>x.id==pex);return{s,e,date:s.date,p:perf(s,e),L:effLoad(s,e),w:work(s,e),r:s.d[pex].rpe,ext:+s.d[pex].load||0,rel:e.bw&&+s.bw>0?Math.round(effLoad(s,e)/s.bw*100):null}});
  let rows=rows0;
  if(pgroup=="week"){const g=new Map();for(const x of rows0){const k=monday(x.date);if(!g.has(k))g.set(k,[]);g.get(k).push(x)}
-  rows=[...g.entries()].map(([k,a])=>{const sum=f=>a.some(x=>x[f]!=null)?a.reduce((t,x)=>t+(x[f]||0),0):null,mx=f=>a.some(x=>x[f]!=null)?Math.max(...a.map(x=>x[f]||0)):null,rs=a.map(x=>x.r).filter(Boolean);
+  rows=[...g.entries()].map(([k,a])=>{const sum=f=>{const v=a.filter(x=>x[f]!=null);return v.length?Math.round(v.reduce((t,x)=>t+x[f],0)/v.length*10)/10:null},mx=f=>a.some(x=>x[f]!=null)?Math.max(...a.map(x=>x[f]||0)):null,rs=a.map(x=>x.r).filter(Boolean);
    const last=a[a.length-1];return{s:last.s,e:last.e,date:k,p:sum("p"),w:sum("w"),L:mx("L"),rel:mx("rel"),ext:last.ext,r:rs.length?Math.round(rs.reduce((t,v)=>t+v,0)/rs.length):0,n:a.length}})}
  const isT=info.u=="s"&&!META[ptpl].fb,hasW=rows.some(x=>x.w!=null),hasR=rows.some(x=>x.rel!=null);
  if((pmode=="work"&&!hasW)||(pmode=="rel"&&!hasR))pmode="perf";
@@ -447,7 +459,7 @@ function progressi(){
  const unit=pmode=="work"?"":pmode=="load"?" kg":pmode=="rel"?" %":isT?(pgroup=="week"?" giri":"/"+(z?z.s.rounds:"")):info.u=="s"?" s":" rip";
  const kpi=z&&val(z)!=null?`<div class="big">${pmode=="load"?kg(val(z)):val(z)}<small>${esc(unit)}</small> ${rows.length>1&&val(a)!=null&&val(z)!=null?`<span class="pill ${val(z)-val(a)>0?"p":val(z)-val(a)<0?"m":"n"}" style="vertical-align:middle">${val(z)-val(a)>0?"+":""}${pmode=="load"?kg(val(z)-val(a)):val(z)-val(a)} da inizio</span>`:""}</div>
   <div class="s">${pgroup=="week"?"Settimana del "+esc(fmtS(z.date))+" · "+z.n+" session"+(z.n==1?"e":"i"):"Ultima: "+esc(fmt(z.s.date))}${isT?"":" · carico effettivo "+kg(z.L)+" kg"} · RPE ${pgroup=="week"?"medio ":""}${z.r||"–"}</div>`:`<div class="s">Nessuna sessione con questo esercizio.</div>`;
- const expl={perf:isT?"Giri completati su quelli previsti.":"Somma su tutti i giri. Le etichette indicano un cambio di carico.",work:"Ripetizioni (o secondi) × carico effettivo. Sale anche se aumenti il peso e perdi una ripetizione.",load:info.bw?"Peso corporeo + zavorra.":"Solo la zavorra.",rel:"(Peso corporeo + zavorra) / peso corporeo: confrontabile anche se il tuo peso cambia."}[pmode]+(pgroup=="week"?" Per settimana: somma delle sessioni (carico e % peso: il massimo; RPE: la media).":"");
+ const expl={perf:isT?"Giri completati su quelli previsti.":"Somma su tutti i giri. Le etichette indicano un cambio di carico.",work:"Ripetizioni (o secondi) × carico effettivo. Sale anche se aumenti il peso e perdi una ripetizione.",load:info.bw?"Peso corporeo + zavorra.":"Solo la zavorra.",rel:"(Peso corporeo + zavorra) / peso corporeo: confrontabile anche se il tuo peso cambia."}[pmode]+(pgroup=="week"?" Per settimana: media per sessione, così settimane con 2 o 3 sessioni sono confrontabili (carico e % peso: il massimo; RPE: la media).":"");
  app.innerHTML=`<div class="navbar flat"></div><h1>Progressi</h1>
  <div class="seg glass">${KEYS.map(k=>`<button data-ptpl="${k}" aria-pressed="${k==ptpl}">${esc(META[k].name)}</button>`).join("")}</div>
  <div class="hdr">${esc(info.name)}</div>
@@ -472,19 +484,27 @@ function status(k,e){
  const last=L[0],r0=last.s.d[e.id].rpe,b0=below(last.s,last.e);
  if(b0>=2&&r0>=9)return{c:"warn",l:"Attenzione",why:`Ultima sessione: ${b0} giri sotto l'obiettivo con RPE ${r0}.`};
  if(L.length>=3){const p=L.slice(0,3).map(x=>perf(x.s,x.e)),ld=L.slice(0,3).map(x=>effLoad(x.s,x.e));
-  if(p[0]<p[1]&&p[1]<p[2]&&ld[0]<=ld[2])return{c:"warn",l:"Attenzione",why:`In calo da 2 sessioni (${p[2]} → ${p[1]} → ${p[0]}) a parità di carico.`}}
+  if(p[0]<p[1]&&p[1]<p[2]&&ld[0]<=ld[2]){
+   const gapD=Math.round((ms(L[0].s.date)-ms(L[1].s.date))/864e5);
+   if(gapD>10)return{c:"keep",l:"Mantieni",why:`Calo dopo ${gapD} giorni di pausa: è normale, riprendi gradualmente prima di cambiare la scheda.`};
+   return{c:"warn",l:"Attenzione",why:`In calo da 2 sessioni (${p[2]} → ${p[1]} → ${p[0]}) a parità di carico${e.bw?" effettivo (peso corporeo compreso)":""}.`}}}
  let n=0;for(const x of L){const r=x.s.d[e.id].rpe;if(x.e.t==e.t&&x.s.rounds==cur(k).rounds&&hit(x.s,x.e)&&r&&r<=7)n++;else break}
  const ar=f1(L.slice(0,Math.max(n,1)).reduce((a,x)=>a+(x.s.d[e.id].rpe||0),0)/Math.max(n,1));
- if(n>=3)return{c:"go",l:"Pronto a progredire",why:`${n} sessioni di fila all'obiettivo, RPE medio ${ar}.`};
+ if(n>=3){const arN=L.slice(0,n).reduce((a,x)=>a+x.s.d[e.id].rpe,0)/n;
+  return{c:"go",l:"Pronto a progredire",why:`${n} sessioni di fila all'obiettivo, RPE medio ${ar}: ${arN<=5.5?"margine ampio, puoi permetterti un passo più deciso":arN<=6.5?"margine buono":"margine minimo, meglio un passo piccolo"}.`}}
  if(!hit(last.s,last.e))return{c:"keep",l:"Mantieni",why:`Obiettivo non ancora raggiunto: ${b0} ${b0==1?"giro":"giri"} sotto.`};
  if(!r0)return{c:"keep",l:"Mantieni",why:"Obiettivo raggiunto, ma manca l'RPE: senza non si può valutare."};
  if(r0>7)return{c:"keep",l:"Mantieni",why:`Obiettivo raggiunto con RPE ${r0}: serve arrivarci con RPE 7 o meno.`};
  return{c:"keep",l:"Mantieni",why:`${n} sessione${n==1?"":"i"} su 3 all'obiettivo con RPE ≤ 7.`};
 }
+/* Fatica: ultime 3 sessioni contro le 3 precedenti (almeno 1), non sul singolo valore.
+   Serve un aumento medio di RPE ≥ 1, in almeno 2 sessioni su 3, senza più obiettivi centrati. */
 function fatigue(k){
- const L=sessOf(k).slice(0,3);if(L.length<3)return null;
- const r=L.map(avgRpe);if(r.some(x=>!x))return null;
- if(r[0]>r[1]&&r[1]>r[2]&&metric(L[0])<=metric(L[2]))return `RPE medio in salita nelle ultime 3 sessioni (${f1(r[2])} → ${f1(r[1])} → ${f1(r[0])}) senza miglioramenti: possibile fatica accumulata, valuta uno scarico.`;
+ const L=sessOf(k).filter(s=>avgRpe(s));if(L.length<4)return null;
+ const rec=L.slice(0,3),base=L.slice(3,6);
+ const av=a=>a.reduce((t,s)=>t+avgRpe(s),0)/a.length,gr=a=>a.reduce((t,s)=>t+goals(s)/s.ex.length,0)/a.length;
+ const b=av(base),r=av(rec),high=rec.filter(s=>avgRpe(s)>=b+.5).length;
+ if(r-b>=1&&high>=2&&gr(rec)<=gr(base))return `RPE medio delle ultime 3 sessioni ${f1(r)} contro ${f1(b)} delle precedenti, senza più obiettivi centrati: possibile fatica accumulata, valuta uno scarico.`;
  return null;
 }
 function piano(){
@@ -570,7 +590,7 @@ app.addEventListener("click",ev=>{
   const H=["data","scheda","versione","esercizio","unita","obiettivo","giro","valore","completato","carico_kg","peso_corporeo_kg","carico_effettivo_kg","rpe_ultimo_giro","tacca_mm","durata_min","note"];
   const L=[H.join(";")];for(const s of [...S.sessions].sort((a,b)=>-byDate(a,b)))for(const e of s.ex){const r=s.d[e.id];if(!r)continue;const isT=timed(s,e);
    r.v.forEach((v,i)=>L.push([s.date,META[s.tpl].name,s.ver,e.name,e.u,e.t,i+1,isT?"":String(v).replace(".",","),isT?(v==1?"si":"no"):(v!==""&&+v>=e.t?"si":"no"),kg(+r.load||0),s.bw?kg(s.bw):"",isT?"":kg(effLoad(s,e)),r.rpe||"",s.edge||"",dur(s)||"",s.note||""].map(q).join(";")))}
-  const blob=new Blob(["\ufeff"+L.join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="diario-allenamenti-"+today()+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+  shareFile("diario-allenamenti-"+today()+".csv","\ufeff"+L.join("\n"),"text/csv")}
  else if(D.edit){edit={k:D.edit,p:clone(cur(D.edit)),note:""};view="edit";editor();window.scrollTo(0,0)}
  else if(edit&&D.rd){edit.p.rounds=Math.min(10,Math.max(1,edit.p.rounds+ +D.rd));document.getElementById("e-r").textContent=edit.p.rounds}
  else if(edit&&D.mv){const i=+D.i,j=i+ +D.mv,a=edit.p.ex;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];editor()}
@@ -620,14 +640,16 @@ window.addEventListener("pagehide",persist);
 window.addEventListener("hashchange",route);
 /* iOS 26/27, app installata: il viewport finisce sopra il bordo reale dello schermo e la barra resta sospesa.
    Se c'è questo scarto, la barra viene ancorata al fondo vero dello schermo. */
+/* Nell'app installata la barra si posiziona dall'alto, sulla misura reale dello schermo:
+   né innerHeight né env(safe-area-inset-bottom) sono affidabili su iOS 26/27. */
 function placeBar(){
  const nav=document.getElementById("tabbar");
  if(!standalone()){nav.style.top="";nav.style.bottom="";return}
  const land=innerWidth>innerHeight,H=land?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
- const gap=H-innerHeight;
- if(gap<=2||gap>200){nav.style.top="";nav.style.bottom="";return}   /* nessuno scarto, oppure tastiera aperta */
- nav.style.bottom="auto";nav.style.top=(H-nav.offsetHeight-22)+"px";
+ nav.style.bottom="auto";nav.style.top=(H-nav.offsetHeight-(land?10:26))+"px";
 }
+document.addEventListener("focusin",e=>{if(e.target.matches("input,textarea,select"))document.getElementById("tabbar").style.visibility="hidden"});
+document.addEventListener("focusout",()=>setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches("input,textarea,select"))document.getElementById("tabbar").style.visibility=""},50));
 for(const ev of["resize","orientationchange","pageshow"])window.addEventListener(ev,()=>setTimeout(placeBar,60));
 route();placeBar();
 if("serviceWorker" in navigator&&location.protocol=="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
