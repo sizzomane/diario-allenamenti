@@ -365,9 +365,10 @@ function storico(){
   <label class="row" style="cursor:pointer"><span class="grow" style="color:var(--tint)">Importa backup</span><input type="file" id="b-import" accept=".json,application/json" class="hidden"></label></div>
  
  <p class="ftr">I dati restano su questo telefono. ${S.lastBackup?"Ultimo backup: "+esc(fmt(dstr(new Date(S.lastBackup))))+".":"Nessun backup ancora."} Ti ricordo di farlo ogni 7 giorni se hai sessioni nuove.</p>
- ${standalone()?`<div class="hdr">Aspetto</div><div class="group"><div class="row"><span class="grow">Altezza barra in basso</span><span class="step"><button class="ib" data-bar="-4" aria-label="Abbassa la barra">↓</button><b id="bar-v">${barOff}</b><button class="ib" data-bar="4" aria-label="Alza la barra">↑</button></span></div>
+ ${`<div class="hdr">Aspetto</div><div class="group"><div class="row"><span class="grow">Altezza barra in basso</span><span class="step"><button class="ib" data-bar="-4" aria-label="Abbassa la barra">↓</button><b id="bar-v">${barOff}</b><button class="ib" data-bar="4" aria-label="Alza la barra">↑</button></span></div>
   <button class="row" data-bar="reset"><span class="grow" style="color:var(--tint)">Ripristina posizione</span></button></div>
-  <p class="ftr">Sposta la barra finché è intera e vicina al bordo. Valori: schermo ${screen.width}×${screen.height}, area ${innerWidth}×${innerHeight}${window.visualViewport?", visibile "+Math.round(visualViewport.height):""}.</p>`:""}`;
+  <p class="ftr">Sposta la barra finché è intera e vicina al bordo. Valori: schermo ${screen.width}×${screen.height}, area ${innerWidth}×${innerHeight}${window.visualViewport?", visibile "+Math.round(visualViewport.height):""}, app installata: ${standalone()?"sì":"no"}.</p>
+ <p class="ftr" style="text-align:center;margin-top:20px">Versione ${VERSION}</p>`}`;
 }
 
 /* ---------- Backup ---------- */
@@ -649,6 +650,7 @@ window.addEventListener("hashchange",route);
    né innerHeight né env(safe-area-inset-bottom) sono affidabili su iOS 26/27. */
 /* Distanza del fondo della barra dal fondo dello schermo, regolabile da Storico → Aspetto */
 const BAR_DEF=60;
+const VERSION="25.11 · 8";
 let barOff=BAR_DEF;try{const v=parseInt(localStorage.getItem("diario-barra"),10);if(isFinite(v))barOff=v}catch(e){}
 function placeBar(){
  const nav=document.getElementById("tabbar");
@@ -661,7 +663,12 @@ document.addEventListener("focusin",e=>{if(e.target.matches("input,textarea,sele
 document.addEventListener("focusout",()=>setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches("input,textarea,select"))document.getElementById("tabbar").style.visibility=""},50));
 for(const ev of["resize","orientationchange","pageshow"])window.addEventListener(ev,()=>setTimeout(placeBar,60));
 route();placeBar();
-if("serviceWorker" in navigator&&location.protocol=="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol=="https:"){
+ /* quando arriva una versione nuova, ricarica subito invece di aspettare la riapertura (salvo sessione aperta) */
+ let reloaded=false;
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloaded||view=="sess"||view=="edit")return;reloaded=true;location.reload()});
+ navigator.serviceWorker.register("sw.js").then(r=>{r.update().catch(()=>{});document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")r.update().catch(()=>{})})}).catch(()=>{});
+}
 }
 </script>
 </body>
