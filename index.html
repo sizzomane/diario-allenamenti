@@ -363,7 +363,11 @@ function storico(){
   <button class="row" id="b-export"><span class="grow" style="color:var(--tint)">Esporta file di backup</span></button>
   <button class="row" id="b-csv"><span class="grow" style="color:var(--tint)">Esporta CSV per Excel o Fogli</span></button>
   <label class="row" style="cursor:pointer"><span class="grow" style="color:var(--tint)">Importa backup</span><input type="file" id="b-import" accept=".json,application/json" class="hidden"></label></div>
- <p class="ftr">I dati restano su questo telefono. ${S.lastBackup?"Ultimo backup: "+esc(fmt(dstr(new Date(S.lastBackup))))+".":"Nessun backup ancora."} Ti ricordo di farlo ogni 7 giorni se hai sessioni nuove.</p>`;
+ 
+ <p class="ftr">I dati restano su questo telefono. ${S.lastBackup?"Ultimo backup: "+esc(fmt(dstr(new Date(S.lastBackup))))+".":"Nessun backup ancora."} Ti ricordo di farlo ogni 7 giorni se hai sessioni nuove.</p>
+ ${standalone()?`<div class="hdr">Aspetto</div><div class="group"><div class="row"><span class="grow">Altezza barra in basso</span><span class="step"><button class="ib" data-bar="-4" aria-label="Abbassa la barra">↓</button><b id="bar-v">${barOff}</b><button class="ib" data-bar="4" aria-label="Alza la barra">↑</button></span></div>
+  <button class="row" data-bar="reset"><span class="grow" style="color:var(--tint)">Ripristina posizione</span></button></div>
+  <p class="ftr">Sposta la barra finché è intera e vicina al bordo. Valori: schermo ${screen.width}×${screen.height}, area ${innerWidth}×${innerHeight}${window.visualViewport?", visibile "+Math.round(visualViewport.height):""}.</p>`:""}`;
 }
 
 /* ---------- Backup ---------- */
@@ -578,6 +582,7 @@ app.addEventListener("click",ev=>{
  else if(D.del){if(!confirm("Eliminare questa sessione?"))return;S.sessions=S.sessions.filter(x=>x.id!=D.del);persist();storico();toast("Eliminata")}
  else if(b.id=="b-copy"){navigator.clipboard.writeText(JSON.stringify(S)).then(()=>{toast("Backup copiato");S.lastBackup=Date.now();persist()},()=>toast("Copia non riuscita"))}
  else if(b.id=="b-export"||b.id=="bk-now")exportJSON();
+ else if(D.bar)setBar(D.bar=="reset"?null:+D.bar);
  else if(b.id=="bk-later"){S.backupSnooze=Date.now()+2*DAY;persist();home()}
  else if(D.ptpl){ptpl=D.ptpl;pex=null;pmode="perf";stopRO();progressi()}
  else if(D.pex){pex=D.pex;stopRO();progressi()}
@@ -642,12 +647,16 @@ window.addEventListener("hashchange",route);
    Se c'è questo scarto, la barra viene ancorata al fondo vero dello schermo. */
 /* Nell'app installata la barra si posiziona dall'alto, sulla misura reale dello schermo:
    né innerHeight né env(safe-area-inset-bottom) sono affidabili su iOS 26/27. */
+/* Distanza del fondo della barra dal fondo dello schermo, regolabile da Storico → Aspetto */
+const BAR_DEF=60;
+let barOff=BAR_DEF;try{const v=parseInt(localStorage.getItem("diario-barra"),10);if(isFinite(v))barOff=v}catch(e){}
 function placeBar(){
  const nav=document.getElementById("tabbar");
  if(!standalone()){nav.style.top="";nav.style.bottom="";return}
  const land=innerWidth>innerHeight,H=land?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
- nav.style.bottom="auto";nav.style.top=(H-nav.offsetHeight-(land?10:26))+"px";
+ nav.style.bottom="auto";nav.style.top=(H-nav.offsetHeight-(land?10:barOff))+"px";
 }
+function setBar(d){barOff=d==null?BAR_DEF:Math.max(0,Math.min(160,barOff+d));try{localStorage.setItem("diario-barra",barOff)}catch(e){}placeBar();const o=document.getElementById("bar-v");if(o)o.textContent=barOff}
 document.addEventListener("focusin",e=>{if(e.target.matches("input,textarea,select"))document.getElementById("tabbar").style.visibility="hidden"});
 document.addEventListener("focusout",()=>setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches("input,textarea,select"))document.getElementById("tabbar").style.visibility=""},50));
 for(const ev of["resize","orientationchange","pageshow"])window.addEventListener(ev,()=>setTimeout(placeBar,60));
