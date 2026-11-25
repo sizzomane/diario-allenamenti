@@ -618,7 +618,18 @@ app.addEventListener("focusin",ev=>{if(ev.target.matches(".cell input,.kg input"
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="hidden")persist()});
 window.addEventListener("pagehide",persist);
 window.addEventListener("hashchange",route);
-route();
+/* iOS 26/27, app installata: il viewport finisce sopra il bordo reale dello schermo e la barra resta sospesa.
+   Se c'è questo scarto, la barra viene ancorata al fondo vero dello schermo. */
+function placeBar(){
+ const nav=document.getElementById("tabbar");
+ if(!standalone()){nav.style.top="";nav.style.bottom="";return}
+ const land=innerWidth>innerHeight,H=land?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
+ const gap=H-innerHeight;
+ if(gap<=2||gap>200){nav.style.top="";nav.style.bottom="";return}   /* nessuno scarto, oppure tastiera aperta */
+ nav.style.bottom="auto";nav.style.top=(H-nav.offsetHeight-22)+"px";
+}
+for(const ev of["resize","orientationchange","pageshow"])window.addEventListener(ev,()=>setTimeout(placeBar,60));
+route();placeBar();
 if("serviceWorker" in navigator&&location.protocol=="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
 </script>
