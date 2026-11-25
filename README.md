@@ -1,14 +1,18 @@
 # Diario allenamenti
 
-Web app per iPhone per registrare i circuiti (Sessione 1, Sessione 2) e la fingerboard (Diti): ripetizioni o secondi per giro, carico, RPE dell'ultimo giro per ogni esercizio, peso corporeo e note.
+Web app per iPhone per registrare i circuiti (Sessione 1, Sessione 2) e la fingerboard (Diti) e decidere come far evolvere le schede.
+
+## Funzioni
+- **Allenati:** griglia esercizi × giri precompilata dall'ultima volta, carico, RPE dell'ultimo giro (con legenda), peso corporeo, tacca per la fingerboard. La sessione si salva mentre scrivi e si riprende se l'app si chiude.
+- **Storico:** esercizi all'obiettivo e RPE medio per sessione; tocca una sessione per il dettaglio e per modificarla.
+- **Progressi:** per esercizio, ripetizioni/secondi, lavoro (rip × carico effettivo), carico, % del peso corporeo; per sessione o per settimana; punti colorati per RPE e linee ai cambi di scheda.
+- **Piano:** stato di ogni esercizio (pronto a progredire, mantieni, attenzione), avviso di fatica, modifica delle schede con versioni e note.
+- **Dati:** backup JSON, importazione con riepilogo, esportazione CSV per Excel o Fogli.
 
 ## Installazione su iPhone
-1. Apri l'indirizzo GitHub Pages del repository in Safari.
+1. Apri https://sizzomane.github.io/diario-allenamenti/ in Safari.
 2. Condividi → Aggiungi alla schermata Home.
-3. Si apre a tutto schermo e funziona anche offline.
+3. Usa sempre l'app dall'icona: i dati di Safari e dell'app installata sono separati.
 
 ## Dati
-I dati restano solo nel telefono (memoria di Safari). Da **Storico → Dati** puoi esportare un file di backup e reimportarlo.
-
-## Modificare gli esercizi
-Le schede sono nell'oggetto `TPL` in `index.html`: nome, numero di giri, esercizi con obiettivo (`t`), unità (`rip` o `s`) e carico iniziale.
+Restano solo sul telefono. Esporta ogni tanto un backup da **Storico → Dati**.
