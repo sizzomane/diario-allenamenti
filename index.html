@@ -786,7 +786,7 @@ window.addEventListener("hashchange",route);
    né innerHeight né env(safe-area-inset-bottom) sono affidabili su iOS 26/27. */
 /* Distanza del fondo della barra dal fondo dello schermo, regolabile da Storico → Aspetto */
 const BAR_DEF=60;
-const VERSION="27.11 · 11";
+const VERSION="27.11 · 12";
 let barOff=BAR_DEF;try{const v=parseInt(localStorage.getItem("diario-barra"),10);if(isFinite(v))barOff=v}catch(e){}
 function placeBar(){
  const nav=document.getElementById("tabbar");
