@@ -166,6 +166,7 @@ details summary::-webkit-details-marker{display:none}
 .undo.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 .undo button{border:0;border-radius:999px;background:var(--tint);color:#fff;font:600 15px -apple-system,system-ui,sans-serif;min-height:36px;padding:0 14px;cursor:pointer}
 .hfilt{overflow-x:auto}
+[id^="g-"]{scroll-margin-top:calc(70px + env(safe-area-inset-top))}
 .hfilt button{flex:none}
 /* iOS 26/27 app installata: le pagine che non scorrono hanno un'area visibile diversa da quelle lunghe.
    Ogni pagina è alta almeno quanto lo schermo + 1px, così la barra resta nello stesso punto in tutte le schede. */
@@ -327,7 +328,7 @@ function home(){
   <div class="acts"><button class="gbtn tinted small" style="color:#fff" id="bk-now">Esporta ora</button><button class="gbtn small" id="bk-later">Tra 2 giorni</button></div></div>`:"";
  const banner=dr?`<div class="banner warn"><span><b>${dr&&dr.editOf?"Modifica in corso":"Sessione in corso"}</b><br><span class="s">${esc(META[dr.tpl].name)} · ${esc(fmt(dr.date))}: è stata salvata in automatico.</span></span>
   <div class="acts"><button class="gbtn tinted small" style="color:#fff" id="d-res">Riprendi</button><button class="gbtn small" id="d-del">Scarta</button></div></div>`:"";
- app.innerHTML=`<div class="navbar flat"></div><h1>Allenati</h1><p class="lead">${wk} sessioni negli ultimi 7 giorni</p>${banner}${bk}
+ app.innerHTML=`<div class="navbar"><span></span><button class="gbtn glass" data-guide="oggi" style="color:var(--tint);font-weight:600">Guida</button></div><h1 style="margin-top:0">Allenati</h1><p class="lead">${wk} sessioni negli ultimi 7 giorni</p>${banner}${bk}
  <div class="hdr">Scegli la scheda</div><div class="tiles">${rows||'<div class="banner info">Nessuna scheda attiva: creane una o ripristinane una dal Piano.</div>'}</div>
  <p class="ftr">Si parte dai valori dell'ultima volta: correggi solo quello che cambia. I dati si salvano mentre scrivi.</p>`;
 }
@@ -402,6 +403,7 @@ function storico(){
   <label class="row" style="cursor:pointer"><span class="grow" style="color:var(--tint)">Importa backup</span><input type="file" id="b-import" accept=".json,application/json" class="hidden"></label></div>
  
  <p class="ftr">I dati restano su questo telefono. ${S.lastBackup?"Ultimo backup: "+esc(fmt(dstr(new Date(S.lastBackup))))+".":"Nessun backup ancora."} Ti ricordo di farlo ogni 7 giorni se hai sessioni nuove.</p>
+ <div class="hdr">Aiuto</div><div class="group"><button class="row" data-guide="storico"><span class="grow" style="color:var(--tint)">Guida all'uso</span><span class="val">›</span></button></div>
  ${`<div class="hdr">Aspetto</div><div class="group"><div class="row"><span class="grow">Altezza barra in basso</span><span class="step"><button class="ib" data-bar="-4" aria-label="Abbassa la barra">↓</button><b id="bar-v">${barOff}</b><button class="ib" data-bar="4" aria-label="Alza la barra">↑</button></span></div>
   <button class="row" data-bar="reset"><span class="grow" style="color:var(--tint)">Ripristina posizione</span></button></div>
   <p class="ftr">Sposta la barra finché è intera e vicina al bordo. Valori: schermo ${screen.width}×${screen.height}, area ${innerWidth}×${innerHeight}${window.visualViewport?", visibile "+Math.round(visualViewport.height):""}, app installata: ${standalone()?"sì":"no"}.</p>
@@ -458,6 +460,64 @@ function detail(){
  </div>
  <div class="hdr">Esercizi</div>${ex}
  ${s.note?`<div class="hdr">Note</div><div class="group"><div class="row">${esc(s.note)}</div></div>`:""}`;
+}
+
+
+/* ---------- Guida ---------- */
+const GUIDE=[
+ ["Prima di iniziare",[
+  ["Usa l'app dall'icona sulla Home, non da Safari.","Su iPhone i dati di Safari e quelli dell'app installata sono separati: se alterni, li trovi divisi."],
+  ["Fai il backup una volta a settimana: Storico → Esporta file di backup → Salva in File.","I dati stanno solo sul telefono; il promemoria in Allenati te lo ricorda."]]],
+ ["Allenati",[
+  ["Tocca una scheda per iniziare. Trovi già i valori dell'ultima sessione: correggi solo quelli cambiati.","Così registri in pochi secondi tra un giro e l'altro."],
+  ["Bordo dei giri: arancione se sei sotto l'obiettivo, verde se sei sopra.","Vedi subito come stai andando rispetto alla scheda."],
+  ["Carico: scrivi la zavorra o il peso usato. Per trazioni, dip, scapular e fingerboard l'app aggiunge da sola il peso corporeo.","È quello che sollevi davvero."],
+  ["Fingerboard: indica la tacca in mm per ogni esercizio.","Cambiare tacca cambia la difficoltà, quindi l'app confronta solo sessioni sulla stessa tacca."],
+  ["Esercizi a tempo (plank, mountain climber): ogni giro è già segnato come completato; toccalo solo se non l'hai finito.","Il tempo lo gestisce il timer: qui conta se hai retto."],
+  ["Sessione di scarico: attiva l'interruttore se fai una sessione volutamente leggera.","Resta nei grafici ma non falsa le valutazioni del Piano, e la volta dopo riparti dai valori normali."]]],
+ ["RPE",[
+  ["Per ogni esercizio tocca un numero da 1 a 10 riferito all'ultimo giro.","L'ultimo giro è il più faticoso e dice se hai margine per aumentare."],
+  ["Come sceglierlo: quante ripetizioni (o quanti secondi) avresti potuto fare ancora? 10 = nessuna, 9 = una, 8 = due, 7 = tre.","Il pulsante ? apre la legenda completa."],
+  ["Toccando di nuovo lo stesso numero lo togli.","Senza RPE il Piano non può valutare l'esercizio."]],true],
+ ["Salvare e riprendere",[
+  ["La sessione si salva da sola mentre scrivi.","Se l'app si chiude o passi al timer, non perdi nulla."],
+  ["Alla riapertura trovi \"Sessione in corso\": Riprendi per continuare, Scarta per eliminarla.",""],
+  ["Alla fine tocca Salva.","Se ci sono valori anomali (in rosso) o un'altra sessione uguale nello stesso giorno, l'app ti chiede conferma."]]],
+ ["Storico",[
+  ["Ogni riga mostra quanti esercizi hai portato all'obiettivo e l'RPE medio.",""],
+  ["Il numero a destra confronta con la sessione precedente della stessa scheda: prima = è la prima sessione di quella scheda; 0 = stessi esercizi all'obiettivo; +1 o −1 = uno in più o uno in meno.",""],
+  ["Tocca una sessione per vedere i giri uno per uno; con Modifica correggi un errore.",""],
+  ["Filtro in alto: mostri solo una scheda.",""],
+  ["✕ elimina una sessione: hai 6 secondi per toccare Annulla.",""]]],
+ ["Progressi",[
+  ["Scegli la scheda in alto e l'esercizio in basso.",""],
+  ["Ripetizioni o Secondi: il totale di tutti i giri.",""],
+  ["Lavoro: ripetizioni × carico effettivo.","Sale anche se aumenti il peso e perdi una ripetizione: è il modo più onesto di vedere il progresso."],
+  ["Carico: il carico effettivo. % peso: (peso corporeo + zavorra) / peso corporeo.","Confrontabile anche se il tuo peso cambia."],
+  ["Sessioni o Settimane: per settimana vedi la media per sessione.","Così confronti settimane con 2 e con 3 allenamenti."],
+  ["Nel grafico: il colore dei punti è l'RPE, dal verde (facile) al rosso (al limite); i punti vuoti sono scarichi; le linee tratteggiate sono cambi di versione della scheda; le etichette segnano cambi di carico o di tacca.",""]]],
+ ["Piano",[
+  ["Pronto a progredire: obiettivo in tutti i giri con RPE 7 o meno per 3 sessioni di fila.","Il testo indica anche il margine (ampio, buono, minimo), per aiutarti a decidere quanto aumentare."],
+  ["Mantieni: non ci sei ancora.","Il motivo sotto dice cosa manca."],
+  ["Attenzione: 2 o più giri sotto l'obiettivo con RPE 9 o più, oppure 2 sessioni di fila in calo a parità di carico.","Se il calo arriva dopo più di 10 giorni di pausa diventa Mantieni, perché è normale."],
+  ["Avviso di fatica: compare se l'RPE medio delle ultime 3 sessioni è salito di almeno 1 senza miglioramenti.","Valuta uno scarico."],
+  ["Modifica scheda: giri, esercizi, obiettivi, carichi, pause, tacche. Ogni modifica crea una nuova versione con la nota del perché.","Le sessioni passate restano legate alla loro versione: così capisci quale protocollo ha funzionato."],
+  ["Nuova scheda, Duplica, Archivia: le schede archiviate spariscono da Allenati ma conservano storico e grafici.","Le ripristini dal fondo del Piano."]]],
+ ["Dati",[
+  ["Esporta file di backup: salva tutto in un file da tenere in File o iCloud.",""],
+  ["Copia backup: alternativa se l'esportazione non funziona.","Incolla il testo in Note."],
+  ["Importa backup: prima di procedere ti mostra cosa verrà aggiunto o sostituito.",""],
+  ["Esporta CSV: una riga per ogni giro, da aprire in Excel o Fogli.","Utile per analisi più lunghe."]]]
+];
+let guideBack="oggi";
+function guida(){
+ const idx=GUIDE.map(([t],i)=>`<button data-gto="${i}">${esc(t)}</button>`).join("");
+ const sec=GUIDE.map(([t,items,leg],i)=>`<div class="hdrrow" id="g-${i}"><span class="hdr">${i+1}. ${esc(t)}</span>${leg?'<button class="q" data-leg="1" aria-label="Legenda RPE">?</button>':""}</div>
+  <div class="group">${items.map(([a,b])=>`<div class="prow"><span style="grid-column:1/3">${esc(a)}</span>${b?`<span class="s">${esc(b)}</span>`:""}</div>`).join("")}</div>`).join("");
+ app.innerHTML=`<div class="navbar"><button class="gbtn round glass" data-go="${guideBack}" aria-label="Indietro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>
+ <h1>Guida</h1><p class="lead">Come usare il Diario. Tocca una sezione per andarci.</p>
+ <div class="seg glass hfilt" style="flex-wrap:wrap;border-radius:22px">${idx}</div>${sec}
+ <p class="ftr" style="text-align:center;margin-top:22px">Versione ${VERSION}</p>`;
 }
 
 /* ---------- grafici ---------- */
@@ -640,6 +700,8 @@ app.addEventListener("click",ev=>{
  else if(D.rpe&&s){const r=s.d[D.rpe],v=+D.v;r.rpe=r.rpe==v?0:v;persist();
   b.parentElement.innerHTML=rpeBtns(D.rpe,r.rpe);const bd=document.getElementById("b-"+D.rpe);bd.setAttribute("style",badgeStyle(r.rpe));bd.querySelector("b").textContent=r.rpe||"–"}
  else if(D.del){const i=S.sessions.findIndex(x=>x.id==D.del);if(i<0)return;lastDel={s:S.sessions[i],i};S.sessions.splice(i,1);persist();storico();showUndo()}
+ else if(D.guide){guideBack=D.guide;view="guida";stopRO();guida();window.scrollTo(0,0)}
+ else if(D.gto!=null){const el=document.getElementById("g-"+D.gto);if(el)el.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}
  else if(D.hf){hfilt=D.hf;try{localStorage.setItem("diario-filtro",hfilt)}catch(e){}storico()}
  else if(b.id=="n-new"){edit={k:"c"+Date.now().toString(36),isNew:true,m:{name:"",color:COLORS[4],icon:"",fb:false},p:{rounds:3,ex:[{id:"e"+Date.now().toString(36),name:"Nuovo esercizio",u:"rip",t:10,load:0,bw:false,rest:30}]},note:""};view="edit";editor();window.scrollTo(0,0)}
  else if(D.dup){const k=D.dup,nk="c"+Date.now().toString(36);let nm=META[k].name+" (copia)",j=2;while(keys().some(x=>META[x].name==nm))nm=META[k].name+" (copia "+(j++)+")";
@@ -724,7 +786,7 @@ window.addEventListener("hashchange",route);
    né innerHeight né env(safe-area-inset-bottom) sono affidabili su iOS 26/27. */
 /* Distanza del fondo della barra dal fondo dello schermo, regolabile da Storico → Aspetto */
 const BAR_DEF=60;
-const VERSION="27.11 · 10";
+const VERSION="27.11 · 11";
 let barOff=BAR_DEF;try{const v=parseInt(localStorage.getItem("diario-barra"),10);if(isFinite(v))barOff=v}catch(e){}
 function placeBar(){
  const nav=document.getElementById("tabbar");
